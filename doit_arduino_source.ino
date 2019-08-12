@@ -11,6 +11,10 @@
 DHT_Unified dht(DHTPIN, DHTTYPE);
 uint32_t delayMS;
 
+#include <MQ2.h>
+int Analog_Input = A0;
+
+MQ2 mq2(Analog_Input);
     
 
 // Update these with values suitable for your network.
@@ -33,6 +37,25 @@ void setup_dht11(){
   dht.temperature().getSensor(&sensor);
   delayMS = sensor.min_delay / 1000;
   
+  }
+
+char* mq2_json(){
+  char lpg[50];
+  char co[50];
+  char smoke[50];
+  char buffer[512];
+  const int capacity=JSON_OBJECT_SIZE(6);
+  StaticJsonDocument <capacity> doc;
+  sprintf(lpg, "%f", mq2.readLPG());
+  sprintf(co, "%f", mq2.readCO());
+  sprintf(smoke, "%f", mq2.readSmoke());
+  doc["lpg"] = lpg;
+  doc["co"] = co;
+  doc["smoke"] = smoke;
+  serializeJson(doc, Serial);
+  serializeJson(doc, buffer);
+ 
+  return buffer;
   }
 
 char* dht11_(){
@@ -150,9 +173,8 @@ void reconnect() {
 }
 
 void setup() {
-  pinMode(led, OUTPUT);     // Initialize the led pin as an output
-  
   Serial.begin(115200);
+  pinMode(led, OUTPUT);     // Initialize the led pin as an output
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -167,6 +189,7 @@ void loop() {
   client.loop();
   Serial.print("Publish message: ");
   client.publish("home/temperature/",dht11_());
+  client.publish("home/smoke_detector/",mq2_json());
   delay(1000);
   
 }
