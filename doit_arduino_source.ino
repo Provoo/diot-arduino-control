@@ -4,9 +4,12 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h> 
 
+String diotUuid = "daaaa529db4b4f189e3345efd77ab986";
+
+
 WiFiClient espClient;
 PubSubClient client(espClient);
-const char* mqtt_server = "192.168.0.5";
+const char* mqtt_server = "192.168.0.9";
 
 //#include <DNSServer.h>
 //#include <ESP8266WebServer.h>
@@ -82,20 +85,20 @@ char* mq2_json(){
   char lpg[100];
   char co[100];
   char smoke[100];
-  char buffer[512];
+  char buffer[512];  
   const int capacity=JSON_OBJECT_SIZE(6);
   StaticJsonDocument <capacity> doc;
-  sprintf(lpg, "%f", mq2.readLPG());
-  sprintf(co, "%f", mq2.readCO());
-  Serial.println(mq2.readSmoke());
-
-  sprintf(smoke, "%f", mq2.readSmoke());
-  doc["lpg"] = lpg;
-  doc["co"] = co;
-  doc["smoke"] = smoke;
+  float* values= mq2.read(true);
+  //sprintf(lpg, "%f", values[0]);
+  doc["lpg"] =  mq2.readLPG();
+  //sprintf(co, "%f", values[1]);
+  doc["co"] = mq2.readCO();
+  //sprintf(smoke, "%f", values[2]);
+  doc["smoke"] = mq2.readSmoke();  
   serializeJson(doc, Serial);
   serializeJson(doc, buffer);
- 
+ delay(1000);
+  
   return buffer;
   }
   
@@ -112,8 +115,8 @@ void setup_dht11(){
 char* dht11_(){
   sensors_event_t event;
   dht.temperature().getEvent(&event);
-  char temperature[50];
-  char humidity[50];
+  //char temperature[50];
+  //char humidity[50];
   char buffer[512];
   const int capacity=JSON_OBJECT_SIZE(4);
   StaticJsonDocument <capacity> doc;
@@ -126,8 +129,8 @@ char* dht11_(){
     Serial.print(F("Temperature: "));
     Serial.print(event.temperature);
     Serial.println(F("°C"));
-    sprintf(temperature, "%f", event.temperature);
-    doc["temperature"] = temperature;
+    //sprintf(temperature, "%f", event.temperature);
+    doc["temperature"] = event.temperature;
     
   }
   delay(3000);
@@ -141,8 +144,8 @@ char* dht11_(){
     Serial.print(F("Humidity: "));
     Serial.print(event.relative_humidity);
     Serial.println(F("%"));
-    sprintf(humidity, "%f", event.relative_humidity);
-    doc["humidity"] = humidity;
+    //sprintf(humidity, "%f", event.relative_humidity);
+    doc["humidity"] = event.relative_humidity;
   }
   
   serializeJson(doc, Serial);
@@ -150,13 +153,13 @@ char* dht11_(){
   return buffer;
   }
 
-void pressButton() {
+/*void pressButton() {
   servoMotor.write(180);
   delay(1000);  
   servoMotor.write(0);
   delay(1000);
   
-  }
+  }*/
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -166,7 +169,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println("");
-  if (strcmp(topic,"home/door/")==0){
+  if (strcmp(topic,"daaaa529db4b4f189e3345efd77ab986/door/")==0){
      Serial.print("Inside door");
     if ((char)payload[0] == 'H') {
       digitalWrite(led, LOW);   // Turn the LED on (Note that LOW is the voltage level
@@ -175,7 +178,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
       Serial.print("Inside on");
 
       }
-    }else if(strcmp(topic,"home/open/")==0){
+    }else if(strcmp(topic,"daaaa529db4b4f189e3345efd77ab986/alarm_on/")==0){
+      if ((char)payload[0] == '1') {
+        alarmOn = 1;
+        for (int times = 0; times < 15; times++) {
+          digitalWrite(led, HIGH);  
+          delay(100);
+          digitalWrite(led, LOW);
+        }
+        }
+       else{
+        alarmOn = 0;
+        }
+      }
+
+  /*else if(strcmp(topic,"daaaa529db4b4f189e3345efd77ab986/open/")==0){
       Serial.print("Incoming order press button");
       if ((char)payload[0] == '1') {
         digitalWrite(led, HIGH);  
@@ -184,17 +201,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
         delay(2000);
         digitalWrite(led, LOW);
         }
-      }
-     else if(strcmp(topic,"home/alarm_on/")==0){
-      if ((char)payload[0] == '1') {
-        alarmOn = 1;
-        }
-       else{
-        alarmOn = 0;
-        }
-      }
-
-  // Switch on the LED if an 1 was received as first character
+      }*/
  
 }
 
@@ -209,12 +216,12 @@ void reconnect() {
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("home/temperature/", "1");
-      client.publish("home/temperature/", "1");
+      client.publish("daaaa529db4b4f189e3345efd77ab986/temperature/", "1");
+      client.publish("daaaa529db4b4f189e3345efd77ab986/temperature/", "1");
       // Subscrioción de canales
-      client.subscribe("home/door/");
-      client.subscribe("home/open/");
-      client.subscribe("home/alarm_on/");
+      client.subscribe("daaaa529db4b4f189e3345efd77ab986/door/");
+      client.subscribe("daaaa529db4b4f189e3345efd77ab986/open/");
+      client.subscribe("daaaa529db4b4f189e3345efd77ab986/alarm_on/");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -245,7 +252,7 @@ void setup_wifi() {
 
   randomSeed(micros());
 
-  Serial.println("");
+  Serial.println(""); 
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
@@ -253,11 +260,13 @@ void setup_wifi() {
 
 void setup() {
   Serial.begin(115200);
+  mq2.begin();
   pinMode(led, OUTPUT);     // Initialize the led pin as an output
   //setup_wifi(); //uncoment if you need a manual wifi setup
   wifimanager_setup();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+  
   setup_dht11();
   servoMotor.attach(5);
   pinMode(mageneticSensor1, INPUT_PULLUP);
@@ -270,16 +279,19 @@ void loop() {
   }
   client.loop();
   Serial.print("Publish message: ");
-  delay(500);
-  client.publish("home/temperature/",dht11_());
-  client.publish("home/smoke/",mq2_json());
   delay(1000);
+  client.publish("daaaa529db4b4f189e3345efd77ab986/temperature/",dht11_(),true);
+  client.publish("daaaa529db4b4f189e3345efd77ab986/smoke/",mq2_json(),true);
   if (alarmOn == 1){
     Serial.println("get state");
     stateMageneticSensor1 = digitalRead(mageneticSensor1);
     if (stateMageneticSensor1 == HIGH){
-      client.publish("home/alarm/","1");
-      delay(500);
+      client.publish("daaaa529db4b4f189e3345efd77ab986/alarm/","1",true);
+      delay(1000);
+      }
+    else{
+      client.publish("daaaa529db4b4f189e3345efd77ab986/alarm/","0",true);
+      
       }
     
     }
