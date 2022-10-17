@@ -1,12 +1,9 @@
-# TFG UNIR Carlos Velasco
-## Código Diot Arduino
-
-Esta código pertenece al proyecto Diot Alarma Inteligente.
+## Diot Arduino device code
 
 ![Diot Arduino](Diot_Arduino.png)
 
 
-## Requisitos
+## Requirements
 * Arduino IDE
 * [Arduino Core Esp8266](https://github.com/adafruit/DHT-sensor-library)
 * [DHT Adafruit](https://github.com/adafruit/DHT-sensor-library)
@@ -15,7 +12,7 @@ Esta código pertenece al proyecto Diot Alarma Inteligente.
 *[WiFiManager](https://github.com/tzapu/WiFiManager)  
 
 
-## Instalación
-Abrir el archivo en Arduino IDE e instalar las librerías.
+## Intall
+Install libraries in Arduino IDE.
 
-Una vez terminada la instalación, cambiar la placa en las herramientas del IDE a **GENERIC ESP8266 MODULE**, compilar y subir el código a la placa
+Change IDE config to uyse **GENERIC ESP8266 MODULE**, compile and upload the code the arduino board
